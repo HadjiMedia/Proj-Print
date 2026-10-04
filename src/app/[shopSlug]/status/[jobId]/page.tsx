@@ -1,6 +1,6 @@
 import { and, eq, gt } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { printJobs, shops } from "@/db/schema";
 import OrderStatusTracker from "@/components/order-status-tracker";
 
@@ -14,6 +14,7 @@ export default async function JobStatusPage({
   const { shopSlug, jobId } = await params;
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId)) notFound();
 
+  const db = getDb();
   const [job] = await db
     .select({
       id: printJobs.id,

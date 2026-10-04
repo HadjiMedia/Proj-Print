@@ -1,6 +1,6 @@
 import { and, desc, eq, gt } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { printJobs, shops } from "@/db/schema";
 import { isAdminAuthenticated } from "@/lib/auth";
 import { ensureStarterShop } from "@/lib/shop";
@@ -16,6 +16,7 @@ export default async function AdminDashboardPage({
   if (!(await isAdminAuthenticated())) redirect("/admin/login");
   await ensureStarterShop();
 
+  const db = getDb();
   const allShops = await db
     .select({ id: shops.id, name: shops.name, slug: shops.slug, createdAt: shops.createdAt })
     .from(shops)

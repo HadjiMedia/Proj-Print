@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { shops } from "@/db/schema";
 import { slugify } from "@/lib/validation";
 
 export async function ensureStarterShop() {
+  const db = getDb();
   const requestedSlug = process.env.DEFAULT_SHOP_SLUG || "sunbeam-print";
   const slug = slugify(requestedSlug) || "sunbeam-print";
   const [existing] = await db.select().from(shops).where(eq(shops.slug, slug)).limit(1);

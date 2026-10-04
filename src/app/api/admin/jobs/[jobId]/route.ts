@@ -1,7 +1,10 @@
 import { and, eq, gt } from "drizzle-orm";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { printJobs } from "@/db/schema";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const statuses = ["WAITING", "PRINTING", "DONE", "CANCELLED"] as const;
 type JobStatus = (typeof statuses)[number];
@@ -15,6 +18,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ jobId
     return Response.json({ error: "Print request not found." }, { status: 404 });
   }
   try {
+    const db = getDb();
     const body = (await request.json()) as { status?: unknown };
     if (typeof body.status !== "string" || !statuses.includes(body.status as JobStatus)) {
       return Response.json({ error: "Choose a valid print status." }, { status: 400 });

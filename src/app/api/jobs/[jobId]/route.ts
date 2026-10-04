@@ -1,7 +1,8 @@
 import { and, eq, gt } from "drizzle-orm";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { printJobs, shops } from "@/db/schema";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(
@@ -14,6 +15,7 @@ export async function GET(
   }
 
   try {
+    const db = getDb();
     const [job] = await db
       .select({
         id: printJobs.id,

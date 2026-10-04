@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import QRCode from "qrcode";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { shops } from "@/db/schema";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
   if (!slug) return Response.json({ error: "A shop slug is required." }, { status: 400 });
 
   try {
+    const db = getDb();
     const [shop] = await db.select({ slug: shops.slug }).from(shops).where(eq(shops.slug, slug)).limit(1);
     if (!shop) return Response.json({ error: "Shop not found." }, { status: 404 });
 

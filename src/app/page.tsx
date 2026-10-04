@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, Clock3, FileText, Leaf, Printer, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { eq, or } from "drizzle-orm";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { shops } from "@/db/schema";
 import { ensureStarterShop } from "@/lib/shop";
 
@@ -14,6 +14,7 @@ export default async function HomePage({
   searchParams: Promise<{ shop?: string | string[] }>;
 }) {
   const query = await searchParams;
+  const db = getDb();
   const scannedShop = Array.isArray(query.shop) ? query.shop[0] : query.shop;
   if (scannedShop) {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(scannedShop);

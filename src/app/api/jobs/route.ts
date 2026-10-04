@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { printJobs, shops } from "@/db/schema";
 import { deletePrintFile, storePrintFile } from "@/lib/storage";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/lib/validation";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const mimeByExtension: Record<string, string> = {
@@ -26,6 +27,7 @@ const mimeByExtension: Record<string, string> = {
 export async function POST(request: Request) {
   let storedReference: string | undefined;
   try {
+    const db = getDb();
     const form = await request.formData();
     const parsed = createPrintJobSchema.safeParse({
       shopSlug: form.get("shopSlug"),

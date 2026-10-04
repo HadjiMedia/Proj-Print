@@ -1,9 +1,10 @@
 import { asc, eq } from "drizzle-orm";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { shops } from "@/db/schema";
 import { createShopSchema, slugify } from "@/lib/validation";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
@@ -11,6 +12,7 @@ export async function GET() {
     return Response.json({ error: "Staff sign-in is required." }, { status: 401 });
   }
   try {
+    const db = getDb();
     const allShops = await db
       .select({ id: shops.id, name: shops.name, slug: shops.slug, createdAt: shops.createdAt })
       .from(shops)
@@ -27,6 +29,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Staff sign-in is required." }, { status: 401 });
   }
   try {
+    const db = getDb();
     const body = (await request.json()) as { name?: unknown; slug?: unknown };
     const parsed = createShopSchema.safeParse({
       name: body.name,

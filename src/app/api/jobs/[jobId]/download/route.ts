@@ -1,6 +1,6 @@
 import { and, eq, gt } from "drizzle-orm";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { printJobs } from "@/db/schema";
 import { getPrintFile } from "@/lib/storage";
 import { safeFileName } from "@/lib/validation";
@@ -30,6 +30,7 @@ export async function GET(
   }
 
   try {
+    const db = getDb();
     const [job] = await db
       .select({ fileUrl: printJobs.fileUrl, fileName: printJobs.fileName, fileSize: printJobs.fileSize })
       .from(printJobs)

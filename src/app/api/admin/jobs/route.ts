@@ -1,8 +1,9 @@
 import { and, desc, eq, gt } from "drizzle-orm";
 import { isAdminAuthenticated } from "@/lib/auth";
-import { db } from "@/db";
+import { getDb } from "@/db";
 import { printJobs, shops } from "@/db/schema";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
@@ -14,6 +15,7 @@ export async function GET(request: Request) {
   if (!shopSlug) return Response.json({ error: "Choose a shop." }, { status: 400 });
 
   try {
+    const db = getDb();
     const [shop] = await db.select({ id: shops.id }).from(shops).where(eq(shops.slug, shopSlug)).limit(1);
     if (!shop) return Response.json({ error: "Shop not found." }, { status: 404 });
 
