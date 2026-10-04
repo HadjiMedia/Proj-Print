@@ -1,0 +1,36 @@
+name: Hourly PrintDrop retention sweep
+
+on:
+  schedule:
+    # GitHub Actions schedules use UTC and may be delayed under load.
+    - cron: "7 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: printdrop-retention-sweep
+  cancel-in-progress: false
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PRINTDROP_URL: ${{ secrets.PRINTDROP_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Trigger authenticated retention sweep
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$CRON_SECRET" || ! "$PRINTDROP_URL" =~ ^https://[^/]+ ]]; then
+            echo "Set CRON_SECRET and PRINTDROP_URL (https://...) in GitHub Actions secrets."
+            exit 1
+          fi
+          curl --silent --show-error --fail-with-body \
+            --max-time 55 --retry 2 --retry-delay 5 \
+            --request GET \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            --url "${PRINTDROP_URL%/}/api/cron/purge"

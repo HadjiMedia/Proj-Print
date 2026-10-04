@@ -106,7 +106,7 @@ export async function getPrintFile(reference: string): Promise<{
   return { body: Readable.toWeb(stream) as ReadableStream<Uint8Array> };
 }
 
-export async function deletePrintFile(reference: string): Promise<void> {
+export async function deletePrintFile(reference: string, abortSignal?: AbortSignal): Promise<void> {
   const separator = reference.indexOf(":");
   if (separator < 1) throw new Error("Invalid storage reference.");
   const driver = reference.slice(0, separator);
@@ -117,6 +117,7 @@ export async function deletePrintFile(reference: string): Promise<void> {
     if (!config) throw new Error("S3 storage is not configured.");
     await getS3Client(config).send(
       new DeleteObjectCommand({ Bucket: config.bucket, Key: key }),
+      { abortSignal },
     );
     return;
   }
