@@ -1,41 +1,76 @@
+import "server-only";
+
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-// Importing this module during Next.js page-data collection is safe. Neither the
-// connection string nor a Pool is accessed until a request calls getDb().
-type Database = ReturnType<typeof drizzle>;
+function createDatabase(connectionPool: Pool) {
+  return drizzle(connectionPool);
+}
+
+type Database = ReturnType<typeof createDatabase>;
 
 const globalForDb = globalThis as typeof globalThis & {
-  __printdropPool?: Pool;
-  __printdropDb?: Database;
+  __arenaNextJsPostgresqlPool?: Pool;
+  __printDropDatabase?: Database;
 };
 
-let pool: Pool | undefined;
-let client: Database | undefined;
+export class DatabaseConfigurationError extends Error {
+  constructor() {
+    super(
+      "DATABASE_URL is not configured. Set it in the server environment before making database requests.",
+    );
+    this.name = "DatabaseConfigurationError";
+  }
+}
+
+/**
+ * Called on first use, never at module import time. Next.js imports route modules
+ * while collecting build metadata, even for routes marked force-dynamic.
+ */
+export function getPool(): Pool {
+  if (globalForDb.__arenaNextJsPostgresqlPool) {
+    return globalForDb.__arenaNextJsPostgresqlPool;
+  }
+
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    throw new DatabaseConfigurationError();
+  }
+
+  const connectionPool = new Pool({
+    connectionString: databaseUrl,
+    connectionTimeoutMillis: 10_000,
+  });
+
+  // An idle connection failure must not become an unhandled EventEmitter error.
+  connectionPool.on("error", (error) => {
+    console.error("PrintDrop PostgreSQL idle connection error.", error);
+  });
+
+  // Reuse the pool during development reloads and warm serverless invocations.
+  globalForDb.__arenaNextJsPostgresqlPool = connectionPool;
+  return connectionPool;
+}
 
 export function getDb(): Database {
-  if (client) return client;
-
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required at runtime. Configure it in your deployment environment.");
+  if (!globalForDb.__printDropDatabase) {
+    globalForDb.__printDropDatabase = createDatabase(getPool());
   }
-
-  // Reuse a pool during hot reloads, and reuse the module-scoped pool on warm
-  // production requests. Do not create connections during build-time imports.
-  if (process.env.NODE_ENV !== "production" && globalForDb.__printdropDb) {
-    client = globalForDb.__printdropDb;
-    pool = globalForDb.__printdropPool;
-    return client;
-  }
-
-  pool = new Pool({ connectionString: databaseUrl, max: 5 });
-  client = drizzle(pool);
-
-  if (process.env.NODE_ENV !== "production") {
-    globalForDb.__printdropPool = pool;
-    globalForDb.__printdropDb = client;
-  }
-
-  return client;
+  return globalForDb.__printDropDatabase;
 }
+
+/** Preserve the existing import API without initializing either client. */
+function lazyClient<T extends object>(initialize: () => T): T {
+  return new Proxy({} as T, {
+    get(_target, property) {
+      const client = initialize();
+      const value: unknown = Reflect.get(client, property, client);
+
+      // Drizzle and pg methods rely on the real client as their `this` value.
+      return typeof value === "function" ? value.bind(client) : value;
+    },
+  });
+}
+
+export const pool = lazyClient(getPool);
+export const db = lazyClient(getDb);
